@@ -1,0 +1,39 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: opendcim-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-dcim}
+      MYSQL_USER: ${DB_USER:-dcim}
+      MYSQL_PASSWORD: ${DB_PASS:-dcim}
+    volumes:
+      - dcim_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p${DB_ROOT_PASS:-rootpass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  opendcim:
+    build: .
+    container_name: opendcim-app
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: mariadb
+      DB_NAME: ${DB_NAME:-dcim}
+      DB_USER: ${DB_USER:-dcim}
+      DB_PASS: ${DB_PASS:-dcim}
+      DCIM_HTTP_USER: ${DCIM_HTTP_USER:-dcim}
+      DCIM_HTTP_PASS: ${DCIM_HTTP_PASS:-dcim}
+    volumes:
+      - ./opendcim:/opt/openDCIM/opendcim
+
+volumes:
+  dcim_db_data:
